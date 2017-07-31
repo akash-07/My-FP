@@ -1,0 +1,8 @@
+[0m[[0minfo[0m] [0m[32mFunSetSuite:[0m[0m
+[0m[[0minfo[0m] [0m[32m- contains is implemented[0m[0m
+[0m[[0minfo[0m] [0m[32m- singletonSet(1) contains 1[0m[0m
+[0m[[0minfo[0m] [0m[32m- union contains all elements of each set[0m[0m
+[0m[[0minfo[0m] [0m[32m- Checking intersection of sets[0m[0m
+[0m[[0minfo[0m] [0m[32m- Checking difference of sets[0m[0m
+[0m[[0minfo[0m] [0m[32m- Checking forall function on sets[0m[0m
+[0m[[0minfo[0m] [0m[32m- Checking map function of sets[0m[0m
