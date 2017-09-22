@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ApexVcsIndex">
+    <index-move-record>
+      <option name="firstPath" value="/src/main/scala/Parsing/Reference.scala" />
+      <option name="path" value="/src/main/scala/parsing/Reference.scala" />
+    </index-move-record>
+    <index-move-record>
+      <option name="firstPath" value="/src/main/scala/Parsing/Parsers.scala" />
+      <option name="path" value="/src/main/scala/parsing/Parsers.scala" />
+    </index-move-record>
+  </component>
+</project>

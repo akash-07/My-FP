@@ -1,4 +1,4 @@
-package Parsing
+package parsing
 
 import scala.language.{higherKinds, implicitConversions}
 import scala.util.matching.Regex
@@ -87,11 +87,6 @@ trait Parsers[Parser[+_]] {
 
   def label[A](msg: String)(p: Parser[A]): Parser[A]
 
-  case class Location(input: String, offset: Int = 0) {
-    lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
-    lazy val col = input.slice(0, offset+1).reverse.indexOf('\n')
-  }
-
   //def errorLocation(e: ParseError): Location
 
   //def errorMessage(e: ParseError): String
@@ -100,21 +95,28 @@ trait Parsers[Parser[+_]] {
 
   def errorStack(e: ParseError): List[(Location,String)]
 
-  case class ParseError(stack: List[(Location,String)] = List(),
-                        otherErrors: List[ParseError] = List())
 
 
   def attempt[A](p: Parser[A]): Parser[A]
-  /*
-  laws: map(p)(id) == p
-
-  object Laws {
-    def equal[A](p: Parser[A], p2: Parser[A])(in: Gen[String]):Prop =
-      forAll(in)(s => run(p)(s) == run(p2)(s))
-  }
-
-  def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop =
-    equal(p, p.map.(identity))(in)
-
-  */
 }
+
+case class ParseError(stack: List[(Location,String)] = List(),
+                      otherErrors: List[ParseError] = List())
+
+case class Location(input: String, offset: Int = 0) {
+  lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
+  lazy val col = input.slice(0, offset+1).reverse.indexOf('\n')
+}
+
+/*
+laws: map(p)(id) == p
+
+object Laws {
+  def equal[A](p: Parser[A], p2: Parser[A])(in: Gen[String]):Prop =
+    forAll(in)(s => run(p)(s) == run(p2)(s))
+}
+
+def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop =
+  equal(p, p.map.(identity))(in)
+
+*/
