@@ -1,6 +1,6 @@
-# The-Scala-Way
+# My-FP
 
-**A repository to keep track of progress of learning Scala and FP.**
+**A repository to keep track of progress of learning FP.**
 
 **Contains the following things : **
 - Coded Assignments
