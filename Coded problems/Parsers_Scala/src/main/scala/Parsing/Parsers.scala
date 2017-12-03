@@ -12,22 +12,28 @@ trait Parsers[Parser[+_]] {
   * Another or method has been defined inside the ParserOps class. */
   self =>
 
-  implicit def char(c: Char): Parser[Char]
+  //implicit def char(c: Char): Parser[Char]
 
   /* Primitives of API. */
+  implicit def string(s: String): Parser[String]
+
   def run[A](p: Parser[A])(input: String): Either[ParseError,A]
 
   def or[A](p: Parser[A], p2: => Parser[A]): Parser[A]
 
-  def product[A,B](p: Parser[A], p2: => Parser[B]): Parser[(A,B)]
-
-  def succeed[A](a: A): Parser[A] = string("") map (_ => a)
-
+  //def product[A,B](p: Parser[A], p2: => Parser[B]): Parser[(A,B)]
   def slice[A](p: Parser[A]): Parser[String]
 
-  def map[A,B](p: Parser[A])(f: A => B): Parser[B]
+  def label[A](msg: String)(p: Parser[A]): Parser[A]
 
-  implicit def string(s: String): Parser[String]
+  //def map[A,B](p: Parser[A])(f: A => B): Parser[B]
+  def scope[A](msg: String)(p: Parser[A]): Parser[A]
+
+  //def errorStack(e: ParseError): List[(Location,String)]
+
+  def attempt[A](p: Parser[A]): Parser[A]
+
+  def flatMap[A,B](p: Parser[A])(f: A => Parser[B]): Parser[B]
 
   implicit def operators[A](p: Parser[A]) = ParserOps[A](p)
 
@@ -43,6 +49,8 @@ trait Parsers[Parser[+_]] {
     def **[B](p2: Parser[B]): Parser[(A,B)] = self.product(p,p2)
   }
 
+  def succeed[A](a: A): Parser[A] = string("") map (_ => a)
+
   //def listOfN[A](n: Int,p: Parser[A]): Parser[List[A]]
 
   //def many[A](p: Parser[A]): Parser[List[A]]
@@ -53,7 +61,7 @@ trait Parsers[Parser[+_]] {
 
   /* Keeping this as the primary definition. It could be and has been defined
   * in terms of primitive string, so it is not a primitive.*/
-  def charViaString(c: Char): Parser[Char] =
+  implicit def char(c: Char): Parser[Char] =
     string(c.toString).map(_.charAt(0))
 
   /* Not a primitive, it has been defined in terms of primitive product
@@ -72,40 +80,84 @@ trait Parsers[Parser[+_]] {
 
   /* FlatMap seems to be a new primitive since we could implement map, map2,
   * etc. in terms of it.*/
-  def flatMap[A,B](p: Parser[A])(f: A => Parser[B]): Parser[B]
+
 
   implicit def regex(r: Regex): Parser[String]
 
-  def productViaFlapMap[A,B](p: Parser[A], p2: Parser[B]): Parser[(A,B)] =
+  def product[A,B](p: Parser[A], p2: Parser[B]): Parser[(A,B)] =
     flatMap(p)(a => p2 map (b => (a,b)))
 
   def map2ViaFlatMap[A,B,C](p: Parser[A], p2: Parser[B])(f: (A,B) => C): Parser[C] =
     flatMap(p)(a => p2 map (b => f(a,b)))
 
-  def mapViaFlatMap[A,B](p: Parser[A])(f: A => B): Parser[B] =
+  def map[A,B](p: Parser[A])(f: A => B): Parser[B] =
     flatMap(p)(a => succeed(f(a)))
 
-  def label[A](msg: String)(p: Parser[A]): Parser[A]
+  def whitespace: Parser[String] = "\\s*".r
+
+  def digits: Parser[String] = "\\d+".r
 
   //def errorLocation(e: ParseError): Location
 
   //def errorMessage(e: ParseError): String
 
-  def scope[A](msg: String)(p: Parser[A]): Parser[A]
-
-  def errorStack(e: ParseError): List[(Location,String)]
-
-
-
-  def attempt[A](p: Parser[A]): Parser[A]
 }
 
 case class ParseError(stack: List[(Location,String)] = List(),
-                      otherErrors: List[ParseError] = List())
+                      otherErrors: List[ParseError] = List()) {
+  def push(loc: Location, msg: String): ParseError =
+    copy(stack = (loc,msg) :: stack)
+
+  def label(msg: String): ParseError =
+    ParseError(latestLoc.map((_,msg)).toList,
+      otherErrors map (_.label(msg)))
+
+  def latest: Option[(Location,String)] = stack.lastOption
+
+  def latestLoc: Option[Location] = latest map (_._1)
+
+  override def toString =
+    if (stack.isEmpty) "empty error message"
+    else {
+      val flat: List[(Int,(Location,String))] =
+        allMsgs(0).groupBy(_._2._1).toList.
+          sortBy(_._1.offset).
+          flatMap(_._2)
+      val context = flat.map {
+        case (lvl,(loc,msg)) => ("  " * lvl) + formatLoc(loc) + " " + msg
+      } mkString "\n"
+      val errorPointer = flat.filter(_._1 == 0).last match {
+        case (_,(loc,_)) => loc.currentLine + "\n" + (" " * (loc.col-1)) + "^"
+      }
+      context + "\n\n" + errorPointer
+    }
+
+  def allMsgs(level: Int): List[(Int,(Location,String))] =
+    collapseStack(stack).map((level,_)) ++ otherErrors.flatMap(_.allMsgs(level+1))
+
+  /* Builds a collapsed version of the given error stack -
+   * messages at the same location have their messages merged,
+   * separated by semicolons */
+  def collapseStack(s: List[(Location,String)]): List[(Location,String)] =
+    s.groupBy(_._1).
+      mapValues(_.map(_._2).mkString("; ")).
+      toList.sortBy(_._1.offset)
+
+  def formatLoc(l: Location): String = l.line + "." + l.col
+
+}
 
 case class Location(input: String, offset: Int = 0) {
   lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
   lazy val col = input.slice(0, offset+1).reverse.indexOf('\n')
+
+  def toError(msg: String): ParseError = ParseError(List((this,msg)))
+
+  def advanceBy(n: Int) = copy(offset = offset + n)
+
+  def currentLine: String =
+    if (input.length > 1) input.lines.drop(line-1).next
+    else ""
 }
 
 /*

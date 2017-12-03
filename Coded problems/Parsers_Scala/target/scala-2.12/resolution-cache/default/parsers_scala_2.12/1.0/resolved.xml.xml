@@ -4,7 +4,7 @@
 		module="parsers_scala_2.12"
 		revision="1.0"
 		status="integration"
-		publication="20170922152635"
+		publication="20170922211300"
 	>
 		<description>
 		Parsers_Scala
